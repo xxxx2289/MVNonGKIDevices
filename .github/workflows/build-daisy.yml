@@ -34,10 +34,10 @@ on:
         default: false
       enable_droidspace:
         description: enable Droidspaces/LXC kernel support
-      enable_rekernel:
-        description: integrate Re:Kernel (frozen-process binder/signal reporting)
         type: boolean
         default: false
+      enable_rekernel:
+        description: integrate Re:Kernel (frozen-process binder/signal reporting)
         type: boolean
         default: false
       cgroup_port:

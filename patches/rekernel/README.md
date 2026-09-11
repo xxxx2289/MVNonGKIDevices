@@ -33,43 +33,34 @@
 
 ## 接线（workflow）
 
-三版各接一条 `enable_rekernel`（默认 off）步骤：polaris 取 4.9、RMX2117 取 4.14、
-alioth 取 4.19。步骤 apply 三件补丁 + `drivers/Kconfig`、`drivers/Makefile` 注入 +
-`rekernel.config.fragment`（`CONFIG_REKERNEL=y`、`# CONFIG_REKERNEL_NETWORK is not set`）；
-`merge-defconfig.sh` 断言 `CONFIG_REKERNEL` 且 `CONFIG_REKERNEL_NETWORK` 未开。
-AK3 显示面在 `ENABLE_REKERNEL=true` 时于特性行加入 `REKERNEL`。
+当前只有 polaris（mix2s）接 `enable_rekernel`（默认 off）：步骤 apply 三件补丁 +
+`drivers/Kconfig`、`drivers/Makefile` 注入 + `rekernel.config.fragment`
+（`CONFIG_REKERNEL=y`、`# CONFIG_REKERNEL_NETWORK is not set`）；`merge-defconfig.sh`
+断言 `CONFIG_REKERNEL` 且 `CONFIG_REKERNEL_NETWORK` 未开；AK3 显示面在
+`ENABLE_REKERNEL=true` 时于特性行加入 `REKERNEL`。
+
+辐射顺序：mix2s 运行面通过后才把同一条接线接到其余设备；在此之前，4.14/4.19 与
+4.9 其余设备的三件补丁只作为可行性评估素材留在 `patches/rekernel/{4.9,4.14,4.19}/`。
 
 ## 状态
 
-- 4.9（polaris）：三件补丁对 `lineage-22.2` tip 洁净树真实 `git apply` 顺序通过，
-  已接入 `build-polaris.yml`。**编译面实测通过**：`build-polaris`（`dc8e718`，
-  `root_mode=resukisu-susfs` + `enable_rekernel`）中 `OK CONFIG_REKERNEL=y` /
-  `OK CONFIG_REKERNEL_NETWORK is not set`，`CC drivers/rekernel/rekernel.o` →
-  `LD drivers/rekernel/built-in.o`，并产出 `Image.gz-dtb` 与含 `REKERNEL` 特性行的
-  AK3 包；运行面（netlink unit 对接、上报路径）待刷机实测。
-- 4.14（RMX2117）：三件补丁对 `f0c2afc4d` 洁净树真实 `git apply` 顺序通过，
-  已接入 `build-RMX2117.yml`。**编译面实测通过**：`build-RMX2117` 的 susfs 模式
-  + `enable_rekernel` 构建中 `OK CONFIG_REKERNEL=y` / `OK CONFIG_REKERNEL_NETWORK
-  is not set`、`CC drivers/rekernel/rekernel.o` → `AR drivers/rekernel/built-in.o`，
-  产出 `Image` 与含 `REKERNEL` 特性行的 AK3 包；运行面待刷机实测。
-- 4.19（alioth）：三件补丁对 `71b13e6`（`lineage-23.2` tip）洁净树真实 `git apply`
-  顺序通过，已接入 `build-alioth.yml`。**编译面实测通过**：`build-alioth` 的 susfs
-  模式 + `enable_rekernel` 构建中 `OK CONFIG_REKERNEL=y` / `OK CONFIG_REKERNEL_NETWORK
-  is not set`、`CC drivers/rekernel/rekernel.o` → `AR drivers/rekernel/built-in.a`，
-  产出 `Image` 与含 `REKERNEL` 特性行的 AK3 包；运行面待刷机实测。
-- 三版的接线步骤均在其目标树 worktree 上真实执行：`drivers/rekernel/` 四件落位、
-  `drivers/Kconfig` 与 `drivers/Makefile` 各注入一行、fragment 为
-  `CONFIG_REKERNEL=y` + `# CONFIG_REKERNEL_NETWORK is not set`、binder 与 signal
-  上报钩子各一处；运行面待刷机实测。
-- 4.9 其余设备树（同一组三件补丁，按补丁涉及文件核对：`drivers/android/binder.c`、
-  `drivers/android/binder_alloc.h`、`kernel/signal.c`、`kernel/cgroup_freezer.c`、
-  `drivers/Kconfig`、`drivers/Makefile`）：
-  - beryllium（`thirteen`）、daisy（`lineage-20`）：三件顺序 `git apply --check` 通过；
-    binder 锚点为 `atomic_inc(&target_proc->tmp_ref)`，与 polaris 同形。
-  - vince（`13`）：该树此段为 `target_proc->tmp_ref++`（裸自增），0002 按该形态重锚，
-    落在 `4.9/vince/`（0001/0003 仍取共享件）。
-  - 三棵树的 `struct binder_alloc` 均带 `buffer_size`（`binder_alloc.h`），与 port 中
-    `alloc.free_async_space` / `alloc.buffer_size` 的引用相符。
-- 接线：六台均已接 `enable_rekernel`（默认 off），步骤体一致（三件补丁按全路径逐个
-  `git apply --check` 后应用）；六台的步骤均在各自目标树上真实执行通过（四件落位、
-  `drivers/Kconfig` 与 `drivers/Makefile` 各注入一行、fragment 两行）。
+- polaris（mix2s，`lineage-22.2`）：三件补丁对 tip 洁净树真实 `git apply` 顺序通过。
+  编译面实测通过（`build-polaris` `dc8e718` 起：`OK CONFIG_REKERNEL=y` /
+  `OK CONFIG_REKERNEL_NETWORK is not set`、`CC drivers/rekernel/rekernel.o` →
+  `LD drivers/rekernel/built-in.o`，产出 `Image.gz-dtb` 与含 `REKERNEL` 特性行的
+  AK3 包）。**运行面未通过**：刷入后 freezer 相关面提示内部异常，原因待定位——需要
+  dmesg / 客户端日志与 `mount | grep cgroup` 的层级信息；本 port 在 4.9 上只识别 v1
+  冻结状态（该树无 `JOBCTL_TRAP_FREEZE`，判定式为 `jobctl_frozen() ||
+  cgroup_freezing()`），若该机走 cgroup v2 冻结，判定不会命中。定位前不辐射其他设备。
+- 4.14（RMX2117）/ 4.19（alioth）：三件补丁对 `f0c2afc4d` / `71b13e6` 洁净树真实
+  `git apply` 顺序通过；评估期构建（接线已收起）里 `CONFIG_REKERNEL=y`、
+  `CC drivers/rekernel/rekernel.o` → 归档、`Image` 与含 `REKERNEL` 特性行的 AK3 包
+  均达成。当前未接线。
+- 4.9 其余设备（beryllium `thirteen`、daisy `lineage-20`、vince `13`）：三件顺序
+  `git apply --check` 通过；vince 的 binder 段为 `target_proc->tmp_ref++`（裸自增），
+  0002 按该形态重锚在 `4.9/vince/`（0001/0003 取共享件）；三棵树的
+  `struct binder_alloc` 均带 `buffer_size`，与 port 里 `alloc.free_async_space` /
+  `alloc.buffer_size` 的引用相符。当前未接线。
+- 接线步骤在 polaris 的目标树 worktree 上真实执行：`drivers/rekernel/` 四件落位、
+  `drivers/Kconfig` 与 `drivers/Makefile` 各注入一行、fragment 为 `CONFIG_REKERNEL=y`
+  + `# CONFIG_REKERNEL_NETWORK is not set`、binder 与 signal 上报钩子各一处。

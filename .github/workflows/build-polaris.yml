@@ -287,12 +287,11 @@ jobs:
           # drivers/rekernel/ plus the binder and signal report hooks. The
           # Kconfig/Makefile wiring lives here because the integration
           # steps above rewrite those two files.
-          for p in 0001-drivers-rekernel-netlink-server \
-                   0002-binder-frozen-transaction-notify \
-                   0003-signal-frozen-kill-notify; do
-            P="$GITHUB_WORKSPACE/patches/rekernel/4.9/$p.patch"
-            git apply --check "$P" || { echo "$p does not apply cleanly"; exit 1; }
-            git apply "$P"
+          for p in "$GITHUB_WORKSPACE/patches/rekernel/4.9/0001-drivers-rekernel-netlink-server.patch" \
+                   "$GITHUB_WORKSPACE/patches/rekernel/4.9/0002-binder-frozen-transaction-notify.patch" \
+                   "$GITHUB_WORKSPACE/patches/rekernel/4.9/0003-signal-frozen-kill-notify.patch"; do
+            git apply --check "$p" || { echo "$(basename "$p") does not apply cleanly"; exit 1; }
+            git apply "$p"
           done
           grep -q 'drivers/rekernel/Kconfig' drivers/Kconfig || \
             sed -i '/endmenu/i\source "drivers/rekernel/Kconfig"' drivers/Kconfig
@@ -301,7 +300,6 @@ jobs:
           printf 'CONFIG_REKERNEL=y\n# CONFIG_REKERNEL_NETWORK is not set\n' \
             > "$GITHUB_WORKSPACE/rekernel.config.fragment"
           ls drivers/rekernel
-
       # Commit all applied patches so `make`'s setlocalversion sees a clean
       # git tree -> kernel version loses the "-dirty" suffix while keeping
       # the git describe commit id (4.9 uses CONFIG_LOCALVERSION_AUTO).

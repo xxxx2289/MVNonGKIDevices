@@ -330,7 +330,7 @@ index 000000000..d37841e02
 +			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val, rpc_type[type], -1);
 +		}
 +		break;
-+	case SIGNAL:
++	case REKERNEL_SIGNAL:
 +		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", type, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val);
 +		break;
 +	default:
@@ -381,7 +381,7 @@ index 000000000..9527ce0b3
 +
 +enum report_type {
 +	BINDER,
-+	SIGNAL,
++	REKERNEL_SIGNAL,
 +#ifdef CONFIG_REKERNEL_NETWORK
 +	NETWORK,
 +#endif /* CONFIG_REKERNEL_NETWORK */

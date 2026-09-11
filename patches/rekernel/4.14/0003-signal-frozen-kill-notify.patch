@@ -18,7 +18,7 @@ index 823d7603b..24eada104 100755
  
 +#ifdef CONFIG_REKERNEL
 +	if (p && (sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT))
-+		rekernel_report(SIGNAL, sig, current->pid, current,
++		rekernel_report(REKERNEL_SIGNAL, sig, current->pid, current,
 +				task_pid_nr(p), p, 0, NULL);
 +#endif /* CONFIG_REKERNEL */
  #ifdef OPLUS_FEATURE_HANS_FREEZE

@@ -34,6 +34,10 @@ on:
         default: false
       enable_droidspace:
         description: enable Droidspaces/LXC kernel support
+      enable_rekernel:
+        description: integrate Re:Kernel (frozen-process binder/signal reporting)
+        type: boolean
+        default: false
         type: boolean
         default: false
       cgroup_port:
@@ -63,6 +67,7 @@ jobs:
       ROOT_MANAGER: ${{ startsWith(inputs.root_mode, 'resukisu') && 'resukisu' || startsWith(inputs.root_mode, 'xxksu') && 'xxksu' || 'none' }}
       ENABLE_BBG: ${{ inputs.enable_bbg }}
       ENABLE_DROIDSPACE: ${{ inputs.enable_droidspace }}
+      ENABLE_REKERNEL: ${{ inputs.enable_rekernel }}
       CGROUP_PORT: ${{ inputs.cgroup_port }}
       ENABLE_DATA_ISOLATION: "false"   # sdcardfs data isolation is polaris-specific
       HOOK_TYPE: ${{ endsWith(inputs.root_mode, '-auto') && 'auto' || endsWith(inputs.root_mode, '-susfs') && 'susfs' || endsWith(inputs.root_mode, '-syscall_table') && 'syscall_table' || endsWith(inputs.root_mode, '-branch_link') && 'branch_link' || startsWith(inputs.root_mode, 'resukisu') && 'manual' || 'none' }}
@@ -296,6 +301,34 @@ jobs:
           fi
           bash scripts/integrate-droidspace.sh "$KROOT" "$PORT"
 
+      # vince's binder.c increments target_proc->tmp_ref directly, so its
+      # 0002 is re-anchored under the device directory.
+      # 4.9 tree-adapted port of the upstream kernel-embedded form: drivers/rekernel/
+      # plus the binder and signal report hooks. The Kconfig/Makefile wiring lives here
+      # because the integration steps above rewrite those two files.
+      - name: Integrate Re:Kernel (enable_rekernel)
+        if: env.ENABLE_REKERNEL == 'true'
+        run: |
+          cd "$KROOT"
+          # 4.9 tree-adapted port of the upstream kernel-embedded form:
+          # drivers/rekernel/ plus the binder and signal report hooks. The
+          # Kconfig/Makefile wiring lives here because the integration
+          # steps above rewrite those two files.
+          for p in "$GITHUB_WORKSPACE/patches/rekernel/4.9/0001-drivers-rekernel-netlink-server.patch" \
+                   "$GITHUB_WORKSPACE/patches/rekernel/4.9/vince/0002-binder-frozen-transaction-notify.patch" \
+                   "$GITHUB_WORKSPACE/patches/rekernel/4.9/0003-signal-frozen-kill-notify.patch"; do
+            git apply --check "$p" || { echo "$(basename "$p") does not apply cleanly"; exit 1; }
+            git apply "$p"
+          done
+          grep -q 'drivers/rekernel/Kconfig' drivers/Kconfig || \
+            sed -i '/endmenu/i\source "drivers/rekernel/Kconfig"' drivers/Kconfig
+          grep -q 'obj-$(CONFIG_REKERNEL) += rekernel/' drivers/Makefile || \
+            printf 'obj-$(CONFIG_REKERNEL) += rekernel/\n' >> drivers/Makefile
+          printf 'CONFIG_REKERNEL=y\n# CONFIG_REKERNEL_NETWORK is not set\n' \
+            > "$GITHUB_WORKSPACE/rekernel.config.fragment"
+          ls drivers/rekernel
+
+
       # Commit all applied patches so `make`'s setlocalversion sees a clean
       # git tree -> kernel version loses the "-dirty" suffix while keeping
       # the git describe commit id (4.9 uses CONFIG_LOCALVERSION_AUTO).
@@ -322,12 +355,14 @@ jobs:
           fi
           [ "$ENABLE_BBG" = "true" ] && FRAGS="$FRAGS $GITHUB_WORKSPACE/bbg.config.fragment"
           [ "$ENABLE_DROIDSPACE" = "true" ] && FRAGS="$FRAGS $GITHUB_WORKSPACE/patches/droidspace/4.9/droidspace.config"
+          [ "$ENABLE_REKERNEL" = "true" ] && FRAGS="$FRAGS $GITHUB_WORKSPACE/rekernel.config.fragment"
           BASE_DEFCONFIG="arch/arm64/configs/vince-perf_defconfig" \
           DEVICE_FRAGMENTS="" \
           CLEAR_LOCALVERSION="false" \
           ROOT_MANAGER="$ROOT_MANAGER" \
           ENABLE_BBG="$ENABLE_BBG" \
           ENABLE_DROIDSPACE="$ENABLE_DROIDSPACE" \
+          ENABLE_REKERNEL="$ENABLE_REKERNEL" \
           ENABLE_DATA_ISOLATION="$ENABLE_DATA_ISOLATION" \
           HOOK_EXTRA="$HOOK_EXTRA" \
           HOOK_TYPE="$HOOK_TYPE" \

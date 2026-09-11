@@ -59,12 +59,11 @@ AK3 显示面在 `ENABLE_REKERNEL=true` 时于特性行加入 `REKERNEL`。
   `drivers/android/binder_alloc.h`、`kernel/signal.c`、`kernel/cgroup_freezer.c`、
   `drivers/Kconfig`、`drivers/Makefile`）：
   - beryllium（`thirteen`）、daisy（`lineage-20`）：三件顺序 `git apply --check` 通过；
-    接线步骤在两棵部分树上真实执行，四件落位、两处注入各一行、fragment 两行；binder
-    锚点为 `atomic_inc(&target_proc->tmp_ref)`，与 polaris 同形。
-  - vince（`13`）：0001 与 0003 通过，0002 在该树 `drivers/android/binder.c` 的
-    `target_proc->tmp_ref++`（裸自增，非同形的 `atomic_inc(...)`）处不匹配——辐射到
-    vince 时需按该树形态重锚 0002。
+    binder 锚点为 `atomic_inc(&target_proc->tmp_ref)`，与 polaris 同形。
+  - vince（`13`）：该树此段为 `target_proc->tmp_ref++`（裸自增），0002 按该形态重锚，
+    落在 `4.9/vince/`（0001/0003 仍取共享件）。
   - 三棵树的 `struct binder_alloc` 均带 `buffer_size`（`binder_alloc.h`），与 port 中
     `alloc.free_async_space` / `alloc.buffer_size` 的引用相符。
-- 辐射顺序：mix2s（polaris，已接线）构建通过后再接 beryllium / daisy；vince 需先出
-  重锚版 0002。
+- 接线：六台均已接 `enable_rekernel`（默认 off），步骤体一致（三件补丁按全路径逐个
+  `git apply --check` 后应用）；六台的步骤均在各自目标树上真实执行通过（四件落位、
+  `drivers/Kconfig` 与 `drivers/Makefile` 各注入一行、fragment 两行）。

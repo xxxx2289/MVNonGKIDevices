@@ -17,7 +17,9 @@
 - binder.c 锚点是 MTK 旧式引用计数写法 `target_proc->tmp_ref++;`（4.9 树为
   `atomic_inc(&target_proc->tmp_ref);`），插入点取
   `binder_inner_proc_unlock()` 之后、厂商 `#ifdef BINDER_WATCHDOG` 块之前。
-- `rekernel.h` 沿用同一份 4.9 适配（`JOBCTL_TRAP_FREEZE` 回退；两树均无该位）。
+- `rekernel.h` 沿用同一份 4.9 适配（`JOBCTL_TRAP_FREEZE` 回退；两树均无该位），
+  但报告类型枚举改用 `REKERNEL_SIGNAL`：本树 `include/linux/hans.h` 的
+  `enum message_type` 已占用 `SIGNAL`，同名枚举值会在同一编译单元冲突。
 - async 事务合并块同样省略：本树 `0x40` 是厂商 `TF_ASYNC_BOOST`。
 
 ## 状态

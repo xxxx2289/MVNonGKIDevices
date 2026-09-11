@@ -42,7 +42,11 @@ AK3 显示面在 `ENABLE_REKERNEL=true` 时于特性行加入 `REKERNEL`。
 ## 状态
 
 - 4.9（polaris）：三件补丁对 `lineage-22.2` tip 洁净树真实 `git apply` 顺序通过，
-  已接入 `build-polaris.yml`。
+  已接入 `build-polaris.yml`。**编译面实测通过**：`build-polaris`（`dc8e718`，
+  `root_mode=resukisu-susfs` + `enable_rekernel`）中 `OK CONFIG_REKERNEL=y` /
+  `OK CONFIG_REKERNEL_NETWORK is not set`，`CC drivers/rekernel/rekernel.o` →
+  `LD drivers/rekernel/built-in.o`，并产出 `Image.gz-dtb` 与含 `REKERNEL` 特性行的
+  AK3 包；运行面（netlink unit 对接、上报路径）待刷机实测。
 - 4.14（RMX2117）：三件补丁对 `f0c2afc4d` 洁净树真实 `git apply` 顺序通过，
   已接入 `build-RMX2117.yml`。
 - 4.19（alioth）：三件补丁对 `71b13e6`（`lineage-23.2` tip）洁净树真实 `git apply`
@@ -50,7 +54,7 @@ AK3 显示面在 `ENABLE_REKERNEL=true` 时于特性行加入 `REKERNEL`。
 - 三版的接线步骤均在其目标树 worktree 上真实执行：`drivers/rekernel/` 四件落位、
   `drivers/Kconfig` 与 `drivers/Makefile` 各注入一行、fragment 为
   `CONFIG_REKERNEL=y` + `# CONFIG_REKERNEL_NETWORK is not set`、binder 与 signal
-  上报钩子各一处。编译面待 CI 构建，运行面（netlink unit 对接、上报路径）待刷机实测。
+  上报钩子各一处。4.14/4.19 的编译面待各自 workflow 构建，运行面待刷机实测。
 - 4.9 其余设备树（同一组三件补丁，按补丁涉及文件核对：`drivers/android/binder.c`、
   `drivers/android/binder_alloc.h`、`kernel/signal.c`、`kernel/cgroup_freezer.c`、
   `drivers/Kconfig`、`drivers/Makefile`）：
